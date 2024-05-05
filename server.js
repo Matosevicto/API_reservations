@@ -6,7 +6,7 @@ app.use(express.json());
 app.use(cors());
 
 const mongoose = require('mongoose');
-mongoose.connect('mongodb://127.0.0.1:27017/Reservations', {
+mongoose.connect('mongodb://127.0.0.1:27017/Azil', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
@@ -37,18 +37,19 @@ async function getNextSequence(name) {
   return counter.seq;
 }
 
-const ReservationSchema = new Schema({
+const UnosSchema = new Schema({
   id: { type: Number, unique: true },
   name: String,
-  surename: String,
-  age: Number,
-  start:String,
-  end:String,
-  class:String,
-  email: { type: String, required: true }
+  species: String,
+  starost: Number,
+  udomljen:Boolean,
+  
+  cip:Boolean,
+  zadnjiPregled:Date,
+  napomena:String
 });
 
-const Reservation = mongoose.model("Reservation", ReservationSchema);
+const Unos = mongoose.model("Unos", UnosSchema);
 
 const CitySchema = new Schema({
   id: { type: Number, unique: true },
@@ -64,35 +65,36 @@ const ClassSchema = new Schema({
 })
 const Class = mongoose.model("Class",ClassSchema)
 
-app.post("/reservations", async (req, res) => {
-  if (!req.body.name || !req.body.surename || !req.body.age ) {
+app.post("/zivotinje", async (req, res) => {
+  if (!req.body.ime || !req.body.spol || !req.body.starost ) {
     return res.status(400).send('Name, surename and year are required.');
   }
 
-  const id = await getNextSequence('reservationId');
+  const id = await getNextSequence('unosId');
 
-  const newReservation = new Reservation({
+  const newUnos = new Unos({
     id,
-    name: req.body.name,
-    surename: req.body.surename,
-    age: req.body.age,
-    start: req.body.start,
-    end: req.body.end,
-    class: req.body.class,
-    email: req.body.email
+    ime: req.body.ime,
+    vrsta:req.body.vrsta,
+    spol: req.body.spol,
+    starost: req.body.starost,
+    udomljen: req.body.udomljen,
+    cip: req.body.cip,
+    zadnjiPregled: req.body.zadnjiPregled,
+    napomena: req.body.napomena
   });
   try {
-    await newReservation.save();
+    await newUnos.save();
     res.send("Reservation saved in database");
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
 
-app.get('/reservations', async (req, res) => {
+app.get('/zivotinje', async (req, res) => {
   try {
-    const allReservations = await Reservation.find();
-    res.json(allReservations);
+    const allUnos = await Unos.find();
+    res.json(allUnos);
   } catch (error) {
     res.status(500).send(error.message);
   }
