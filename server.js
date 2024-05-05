@@ -5,6 +5,8 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
+
+
 const mongoose = require('mongoose');
 mongoose.connect('mongodb://127.0.0.1:27017/Azil', {
   useNewUrlParser: true,
@@ -38,32 +40,43 @@ async function getNextSequence(name) {
 }
 
 const UnosSchema = new Schema({
-  id: { type: Number, unique: true },
-  name: String,
-  species: String,
+   id: { type: Number, unique: true },
+  ime: String,
+  vrsta: String,
+  spol: String,
   starost: Number,
-  udomljen:Boolean,
-  
-  cip:Boolean,
-  zadnjiPregled:Date,
-  napomena:String
+  rasa: String,
+  udomljen: Boolean,
+  slika: {
+    type: String,
+    match: /^(https?|chrome):\/\/[^\s$.?#].[^\s]*$/,
+    // Regular expression for URL validation
+  },
+  cip: Boolean,
+  zadnjiPregled: Date,
+  napomena: String
 });
 
 const Unos = mongoose.model("Unos", UnosSchema);
 
-const CitySchema = new Schema({
+const DonacijeSchema = new Schema({
   id: { type: Number, unique: true },
-  name:String,
-  country:String
+  kategorija:String,
+  tip:String,
+  vrijednost:Number,
+  opis:String
 })
 
-const City = mongoose.model("City",CitySchema)
+const Donacija = mongoose.model("Donacija", DonacijeSchema);
 
-const ClassSchema = new Schema({
+const ObavijestSchema = new Schema({
   id: { type: Number, unique: true },
-  name:String
+  naslov:String,
+  datum:Date,
+  tekst:String,
+  vazno:Boolean
 })
-const Class = mongoose.model("Class",ClassSchema)
+const Obavijest = mongoose.model("Obavijest",ObavijestSchema)
 
 app.post("/zivotinje", async (req, res) => {
   if (!req.body.ime || !req.body.spol || !req.body.starost ) {
@@ -78,14 +91,16 @@ app.post("/zivotinje", async (req, res) => {
     vrsta:req.body.vrsta,
     spol: req.body.spol,
     starost: req.body.starost,
+    rasa: req.body.rasa,
     udomljen: req.body.udomljen,
+    slika:req.body.slika,
     cip: req.body.cip,
     zadnjiPregled: req.body.zadnjiPregled,
     napomena: req.body.napomena
   });
   try {
     await newUnos.save();
-    res.send("Reservation saved in database");
+    res.send("Životinja spremljena u bazu.");
   } catch (error) {
     res.status(500).send(error.message);
   }
@@ -99,11 +114,11 @@ app.get('/zivotinje', async (req, res) => {
     res.status(500).send(error.message);
   }
 });
-app.get("/reservations/:id", async (req, res) => {
+app.get("/zivotinje/:id", async (req, res) => {
   try {
-    const reservation = await Reservation.findOne({ id: req.params.id });
-    if (!reservation) {
-      return res.status(404).send('The reservation with the given ID was not found.');
+    const Unos = await Unos.findOne({ id: req.params.id });
+    if (!unos) {
+      return res.status(404).send('Životinja s navedenim ID-om nije pronađena.');
     }
     res.json(reservation);
   } catch (error) {
@@ -112,81 +127,97 @@ app.get("/reservations/:id", async (req, res) => {
 });
 
 
-
-
-app.delete('/reservations/:id', async (req, res) => {
+app.delete('/zivotinje/:id', async (req, res) => {
   try {
-    const reservation = await Reservation.findOneAndDelete({ id: req.params.id });
-    if (!reservation) {
+    const Unos = await Unos.findOneAndDelete({ id: req.params.id });
+    if (!Unos) {
+      return res.status(404).send('Životinja ne postoji.');
+    }
+    res.send('Životinja izbrisana');
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+app.put('/zivotinje/:id', async (req, res) => {
+  try {
+    const Unos = await Unos.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!Unos) {
       return res.status(404).send('Reservation does not exist');
     }
-    res.send('Reservation deleted');
+    res.json(unos);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+app.get('/donacije', async (req, res) => {
+  try {
+    const allDonacije = await Donacija.find();
+    res.json(allDonacije);
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
 
-app.put('/reservations/:id', async (req, res) => {
+app.post("/donacije", async (req, res) => {
+  if (!req.body.tip) {
+    return res.status(400).send('Tip donacije je potreban.');
+  }
+
+  const id = await getNextSequence('donacijaId');
+
+  const newDonacija = new Donacija({
+    id,
+    kategorija:req.body.kategorija,
+    tip: req.body.tip,
+    vrijednost: Number(req.body.vrijednost),
+    opis: req.body.opis
+  });
   try {
-    const reservation = await Reservation.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!reservation) {
-      return res.status(404).send('Reservation does not exist');
+    await newDonacija.save();
+    res.send("Donacija je spremljena");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+
+app.get('/obavijesti', async (req, res) => {
+  try {
+    const allObavijesti = await Obavijest.find();
+    res.json(allObavijesti);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+app.post("/obavijesti", async (req, res) => {
+  if (!req.body.naslov ) {
+    return res.status(400).send('Nalov je potreban.');
+  }
+
+  const id = await getNextSequence('ObavijestId');
+
+  const newObavijest = new Obavijest({
+    id,
+    naslov:req.body.naslov,
+    datum:req.body.datum,
+    tekst:req.body.tekst,
+    vazno:req.body.vazno
+  });
+  try {
+    await newObavijest.save();
+    res.send("Obavijest spremljena u bazu.");
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+app.delete('/obavijesti/:id', async (req, res) => {
+  try {
+    const Obavijest = await Obavijest.findOneAndDelete({ id: req.params.id });
+    if (!Obavijest) {
+      return res.status(404).send('Obavijest ne postoji.');
     }
-    res.json(reservation);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-app.get('/cities', async (req, res) => {
-  try {
-    const allCities = await City.find();
-    res.json(allCities);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-app.post("/cities", async (req, res) => {
-  if (!req.body.name ) {
-    return res.status(400).send('City name is required.');
-  }
-
-  const id = await getNextSequence('cityId');
-
-  const newCity = new City({
-    id,
-    name: req.body.name,
-  });
-  try {
-    await newCity.save();
-    res.send("City saved in database");
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-
-app.get('/classes', async (req, res) => {
-  try {
-    const allClasses = await Class.find();
-    res.json(allClasses);
-  } catch (error) {
-    res.status(500).send(error.message);
-  }
-});
-app.post("/classes", async (req, res) => {
-  if (!req.body.name ) {
-    return res.status(400).send('Class name is required.');
-  }
-
-  const id = await getNextSequence('ClassId');
-
-  const newClass = new Class({
-    id,
-    name: req.body.name,
-  });
-  try {
-    await newClass.save();
-    res.send("Class saved in database");
+    res.send('Obavijest izbrisana');
   } catch (error) {
     res.status(500).send(error.message);
   }
