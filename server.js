@@ -8,6 +8,8 @@ app.use(cors());
 
 
 const mongoose = require('mongoose');
+const { Schema, ObjectId } = mongoose;
+
 mongoose.connect('mongodb://127.0.0.1:27017/Azil', {
   useNewUrlParser: true,
   useUnifiedTopology: true,
@@ -21,7 +23,7 @@ db.once('open', function() {
   console.log('Connected to the MongoDB database');
 });
 
-const { Schema } = mongoose;
+
 
 const CounterSchema = new Schema({
   _id: String,
@@ -59,13 +61,16 @@ const UnosSchema = new Schema({
 
 const Unos = mongoose.model("Unos", UnosSchema);
 
+
+
 const DonacijeSchema = new Schema({
+ 
   id: { type: Number, unique: true },
-  kategorija:String,
-  tip:String,
-  vrijednost:Number,
-  opis:String
-})
+  kategorija: String,
+  tip: String,
+  vrijednost: Number,
+  opis: String
+});
 
 const Donacija = mongoose.model("Donacija", DonacijeSchema);
 
@@ -116,11 +121,11 @@ app.get('/zivotinje', async (req, res) => {
 });
 app.get("/zivotinje/:id", async (req, res) => {
   try {
-    const Unos = await Unos.findOne({ id: req.params.id });
+    const unos = await Unos.findOne({ id: req.params.id });
     if (!unos) {
       return res.status(404).send('Životinja s navedenim ID-om nije pronađena.');
     }
-    res.json(reservation);
+    res.json(unos); 
   } catch (error) {
     res.status(500).send(error.message);
   }
@@ -143,7 +148,7 @@ app.put('/zivotinje/:id', async (req, res) => {
   try {
     const Unos = await Unos.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!Unos) {
-      return res.status(404).send('Reservation does not exist');
+      return res.status(404).send('Životinja ne postoji');
     }
     res.json(unos);
   } catch (error) {
@@ -182,6 +187,38 @@ app.post("/donacije", async (req, res) => {
 });
 
 
+app.put('/donacije/:id', async (req, res) => {
+  try {
+    const updatedDonacija = await Donacija.findOneAndUpdate(
+    
+      { id: req.params.id }, 
+      { kategorija: req.body.kategorija }, 
+      { new: true }
+    );
+    if (!updatedDonacija) {
+      return res.status(404).send('Donacija ne postoji');
+    }
+    res.json(updatedDonacija);
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+app.delete('/donacije/:id', async (req, res) => {
+  try {
+    const donacija = await Donacija.findOneAndDelete({ id: req.params.id });
+    if (!donacija) {
+      return res.status(404).send('Donacija ne postoji.');
+    }
+    res.send('Donacija izbrisana');
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
+
+
+
 app.get('/obavijesti', async (req, res) => {
   try {
     const allObavijesti = await Obavijest.find();
@@ -190,6 +227,19 @@ app.get('/obavijesti', async (req, res) => {
     res.status(500).send(error.message);
   }
 });
+
+app.get("/obavijesti/:id", async (req, res) => {
+  try {
+    const obavijest = await Obavijest.findOne({ id: req.params.id });
+    if (!obavijest) {
+      return res.status(404).send('Obavijest s navedenim ID-om nije pronađena.');
+    }
+    res.json(obavijest); 
+  } catch (error) {
+    res.status(500).send(error.message);
+  }
+});
+
 app.post("/obavijesti", async (req, res) => {
   if (!req.body.naslov ) {
     return res.status(400).send('Nalov je potreban.');
@@ -213,8 +263,8 @@ app.post("/obavijesti", async (req, res) => {
 });
 app.delete('/obavijesti/:id', async (req, res) => {
   try {
-    const Obavijest = await Obavijest.findOneAndDelete({ id: req.params.id });
-    if (!Obavijest) {
+    const obavijest = await Obavijest.findOneAndDelete({ id: req.params.id });
+    if (!obavijest) {
       return res.status(404).send('Obavijest ne postoji.');
     }
     res.send('Obavijest izbrisana');
