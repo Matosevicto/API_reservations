@@ -84,32 +84,42 @@ const ObavijestSchema = new Schema({
 const Obavijest = mongoose.model("Obavijest",ObavijestSchema)
 
 app.post("/zivotinje", async (req, res) => {
+  
   if (!req.body.ime || !req.body.spol || !req.body.starost ) {
-    return res.status(400).send('Name, surename and year are required.');
+    return res.status(400).send('Ime, spol i starost su potrebni za unos.');
   }
 
-  const id = await getNextSequence('unosId');
-
-  const newUnos = new Unos({
-    id,
-    ime: req.body.ime,
-    vrsta:req.body.vrsta,
-    spol: req.body.spol,
-    starost: req.body.starost,
-    rasa: req.body.rasa,
-    udomljen: req.body.udomljen,
-    slika:req.body.slika,
-    cip: req.body.cip,
-    zadnjiPregled: req.body.zadnjiPregled,
-    napomena: req.body.napomena
-  });
   try {
+    
+    const id = await getNextSequence('unosId');
+
+   
+    const newUnos = new Unos({
+      id,
+      ime: req.body.ime,
+      vrsta: req.body.vrsta,
+      spol: req.body.spol,
+      starost: req.body.starost,
+      rasa: req.body.rasa,
+      udomljen: req.body.udomljen,
+      slika: req.body.slika,
+      cip: req.body.cip,
+      zadnjiPregled: req.body.zadnjiPregled,
+      napomena: req.body.napomena
+    });
+
+    
     await newUnos.save();
+
+    
     res.send("Životinja spremljena u bazu.");
   } catch (error) {
+    
+    console.error('Error saving životinja:', error);
     res.status(500).send(error.message);
   }
 });
+
 
 app.get('/zivotinje', async (req, res) => {
   try {
@@ -134,8 +144,8 @@ app.get("/zivotinje/:id", async (req, res) => {
 
 app.delete('/zivotinje/:id', async (req, res) => {
   try {
-    const Unos = await Unos.findOneAndDelete({ id: req.params.id });
-    if (!Unos) {
+    const unos = await Unos.findOneAndDelete({ id: req.params.id });
+    if (!unos) {
       return res.status(404).send('Životinja ne postoji.');
     }
     res.send('Životinja izbrisana');
@@ -146,15 +156,45 @@ app.delete('/zivotinje/:id', async (req, res) => {
 
 app.put('/zivotinje/:id', async (req, res) => {
   try {
-    const Unos = await Unos.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    if (!Unos) {
+    const updatedUnos = await Unos.findOneAndUpdate({ id: req.params.id }, req.body, { new: true });
+    if (!updatedUnos) {
       return res.status(404).send('Životinja ne postoji');
     }
-    res.json(unos);
+    res.json(updatedUnos);
   } catch (error) {
     res.status(500).send(error.message);
   }
 });
+
+
+app.patch('/zivotinje/:id', async (req, res) => {
+  try {
+    const zivotinjeId = parseInt(req.params.id); 
+    const { udomljen } = req.body;
+
+
+    const existingUnos = await Unos.findOne({ id: zivotinjeId }); 
+    if (!existingUnos) {
+     
+      return res.status(404).send('Životinja s tim ID-om nije pronađena.');
+    }
+
+   
+    existingUnos.udomljen = udomljen;
+
+    
+    const updatedUnos = await existingUnos.save();
+
+    
+    res.json(updatedUnos);
+  } catch (error) {
+   
+    res.status(500).send(error.message);
+  }
+});
+
+
+
 app.get('/donacije', async (req, res) => {
   try {
     const allDonacije = await Donacija.find();
